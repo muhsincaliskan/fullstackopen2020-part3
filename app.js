@@ -1,23 +1,26 @@
 const express = require('express');
 const morgan = require('morgan')
+const Person = require('./models/person')
 const cors = require('cors')
+const mongoose = require('mongoose')
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3001;
 const www = process.env.WWW || './';
 
-  
-  const unknownEndpoint = (request, response) => {
+
+const unknownEndpoint = (request, response) => {
     response.status(404).send({ error: 'unknown endpoint' })
-  }
- 
+}
 
 
+morgan.token('bodyContent', (req, res) => (req.method === 'POST' ? JSON.stringify(req.body) : ' '))
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :bodyContent'))
+app.use(cors())
+app.use(express.static('build'))
+app.use(express.static(www));
+app.use(express.json())
 
-  morgan.token('bodyContent', (req, res) => (req.method === 'POST' ? JSON.stringify(req.body) : ' '))
-  app.use(morgan(':method :url :status :res[content-length] - :response-time ms :bodyContent'))
-  app.use(cors())
-  app.use(express.static('build'))
 let persons = [{
     "name": "Arto Hellas",
     "number": "2324239",
@@ -49,10 +52,6 @@ let persons = [{
     "id": 6
 }]
 
-app.use(express.static(www));
-app.use(express.json())
-// app.use(unknownEndpoint())
-
 const generateId = () => {
     const maxId = persons.length > 0
         ? Math.max(...persons.map(n => n.id))
@@ -69,17 +68,22 @@ app.get('/api/info', (req, res) => {
     <p>${new Date()}<p>`);
 });
 app.get('/api/persons', (req, res) => {
-    res.json(persons);
+    Person.find({}).then(persons => {
+        res.json(persons);
+        // mongoose.connection.close()
+    })
+
 });
 app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-    if (person) {
-        response.json(person)
-    }
-    else
-        response.status(404).end()
-
+    Person.findById(request.body.id)
+        .then(person => {
+            if (person) {
+                response.json(person)
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => next(error))
 })
 app.post('/api/persons', (request, response) => {
     const body = request.body
@@ -95,22 +99,28 @@ app.post('/api/persons', (request, response) => {
         })
     }
     else {
-        const person = {
-            name: body.name,
-            number: body.number,
-            id: generateId(),
-        }
+        const person = new Person({
+            name: newName,
+            number: newNumber,
+        })
 
-        persons = persons.concat(person)
-        console.log(person)
-        response.json(person)
+        person.save()
+            .then(savedPerson => {
+                response.json(savedPerson)
+                mongoose.connection.close()
+            })
+            .catch(error => next(error))
+
+
     }
 })
 app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
+    Person.findByIdAndRemove(request.params.id)
+        .then(person => {
+            response.status(204).end()
+        })
+        .catch(error => next(error))
 
-    response.status(204).end()
 })
 app.use(unknownEndpoint)
 app.listen(port, () => console.log(`listening on http://localhost:${port}`));
