@@ -5,9 +5,14 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev":"nodemon app.js",
+    "build:ui": "rm -rf build && cd ../part2/phonebook/ && npm run build --prod && cp -r build ../../part3/build",
+    "dev": "nodemon app.js",
+    "depoloy":"git push heroku main",
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && npm run deploy",   
+    "logs:prod": "heroku logs --tail", 
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "proxy": "http://localhost:3001",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/muhsincaliskan/fullstackopen2020-part3.git"
@@ -19,7 +24,10 @@
   },
   "homepage": "https://github.com/muhsincaliskan/fullstackopen2020-part3#readme",
   "dependencies": {
-    "express": "^4.17.1"
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"
