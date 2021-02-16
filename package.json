@@ -7,8 +7,8 @@
     "start": "node app.js",
     "build:ui": "rm -rf build && cd ../part2/phonebook/ && npm run build --prod && cp -r build ../../part3/build",
     "dev": "nodemon app.js",
-    "github":"git push -u origin main",
-    "github:full":"npm run build:ui && git add . && git commit -m uibuild && npm run github",
+    "github": "git push -u origin main",
+    "github:full": "npm run build:ui && git add . && git commit -m uibuild && npm run github",
     "deploy": "git push heroku main",
     "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && npm run deploy",
     "logs:prod": "heroku logs --tail",
@@ -30,6 +30,7 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "mongoose": "^5.11.16",
+    "mongoose-unique-validator": "^2.0.3",
     "morgan": "^1.10.0"
   },
   "devDependencies": {

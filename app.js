@@ -9,9 +9,6 @@ const port = process.env.PORT || 3001;
 const www = process.env.WWW || './';
 
 
-const unknownEndpoint = (request, response) => {
-    response.status(404).send({ error: 'unknown endpoint' })
-}
 
 
 morgan.token('bodyContent', (req, res) => (req.method === 'POST' ? JSON.stringify(req.body) : ' '))
@@ -20,6 +17,7 @@ app.use(cors())
 app.use(express.static('build'))
 app.use(express.static(www));
 app.use(express.json())
+
 
 let persons = [{
     "name": "Arto Hellas",
@@ -69,30 +67,30 @@ app.get('/api/info', (req, res) => {
 });
 app.get('/api/persons', (req, res) => {
     Person.find({}).then(persons => {
-        res.json(persons);
+        res.json(persons.map(person=>person.toJSON()));
         // mongoose.connection.close()
     })
 
 });
-app.get('/api/persons/:id', (request, response) => {
-    Person.findById(request.body.id)
+app.get('/api/persons/:id', (request, responsei,next) => {
+    Person.findById(request.params.id)
         .then(person => {
             if (person) {
-                response.json(person)
+                response.json(person.toJSON())
             } else {
                 response.status(404).end()
             }
         })
-        .catch(error => next(error))
+        .catch(error =>next(error))
 })
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response,next) => {
     const body = request.body
-    const isExist = persons.filter(person => person.name.toLowerCase() === body.name.toLowerCase()).length
-    if (isExist) {
-        return response.status(400).json({
-            error: 'The name already exists in the phonebook'
-        })
-    }
+    // const isExist = persons.filter(person => person.name.toLowerCase() === body.name.toLowerCase()).length
+    // if (isExist) {
+    //     return response.status(400).json({
+    //         error: 'The name already exists in the phonebook'
+    //     })
+    // }
     if (!body.name || !body.number) {
         return response.status(400).json({
             error: 'The name or number is missing'
@@ -100,21 +98,16 @@ app.post('/api/persons', (request, response) => {
     }
     else {
         const person = new Person({
-            name: newName,
-            number: newNumber,
+            name: body.name,
+            number: body.number,
         })
 
         person.save()
-            .then(savedPerson => {
-                response.json(savedPerson)
-                mongoose.connection.close()
-            })
-            .catch(error => next(error))
-
-
+        .then(savedPerson=>{response.json(savedPerson.toJSON())})
+        .catch(error=>next(error))  
     }
 })
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response,next) => {
     Person.findByIdAndRemove(request.params.id)
         .then(person => {
             response.status(204).end()
@@ -122,5 +115,37 @@ app.delete('/api/persons/:id', (request, response) => {
         .catch(error => next(error))
 
 })
+app.put('/api/persons/:id', (request, response, next) => {
+    const body = request.body
+  
+    const person = {
+      name: body.name,
+      number: body.number,
+    }
+  
+    Person.findByIdAndUpdate(request.params.id, person, { new: true })
+      .then(updatedPerson => {
+        response.json(updatedPerson.toJSON())
+      })
+      .catch(error => next(error))
+  })
+
+
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
 app.use(unknownEndpoint)
+const errorHandler = (error, request, response, next) => {
+    console.error(error);
+    if (error.name === 'Cast Error'&& error.kind == 'ObjectId') {
+        return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
+
 app.listen(port, () => console.log(`listening on http://localhost:${port}`));
