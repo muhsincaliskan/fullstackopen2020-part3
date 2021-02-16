@@ -72,7 +72,7 @@ app.get('/api/persons', (req, res) => {
     })
 
 });
-app.get('/api/persons/:id', (request, responsei,next) => {
+app.get('/api/persons/:id', (request, response,next) => {
     Person.findById(request.params.id)
         .then(person => {
             if (person) {
